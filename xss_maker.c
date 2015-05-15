@@ -111,9 +111,9 @@ ZEND_GET_MODULE(xss_maker)
 /* {{{ PHP_INI
  */
 PHP_INI_BEGIN()
-    STD_PHP_INI_BOOLEAN("xssmaker.autostart", "0", PHP_INI_SYSTEM, OnUpdateLong, autostart, zend_xss_maker_globals, xss_maker_globals)
-    STD_PHP_INI_ENTRY("xssmaker.mark", "#_xss$#i", PHP_INI_ALL, OnUpdateString, mark, zend_xss_maker_globals, xss_maker_globals)
-    STD_PHP_INI_ENTRY("xssmaker.pattern", "'\"><h1>$n|$v</h1>", PHP_INI_ALL, OnUpdateString, pattern, zend_xss_maker_globals, xss_maker_globals)
+    STD_PHP_INI_BOOLEAN("xssmaker.autostart", "1", PHP_INI_SYSTEM, OnUpdateLong, autostart, zend_xss_maker_globals, xss_maker_globals)
+    STD_PHP_INI_ENTRY("xssmaker.marker", "#_xss$#i", PHP_INI_ALL, OnUpdateString, marker, zend_xss_maker_globals, xss_maker_globals)
+    STD_PHP_INI_ENTRY("xssmaker.xss", "'\"><h1>$n|$v</h1>", PHP_INI_ALL, OnUpdateString, xss, zend_xss_maker_globals, xss_maker_globals)
 PHP_INI_END()
 /* }}} */
 
@@ -122,8 +122,8 @@ PHP_GINIT_FUNCTION(xss_maker)
 {
     xss_maker_globals->autostart = 0;
     xss_maker_globals->enabled = 0;
-    xss_maker_globals->mark = NULL;
-    xss_maker_globals->pattern = NULL;
+    xss_maker_globals->marker = NULL;
+    xss_maker_globals->xss = NULL;
 }
 /* }}} */
 
@@ -260,25 +260,25 @@ PHP_FUNCTION(xm_mysqli_fetch_assoc)
 static int place_xss(char *name, int name_len, char *value, int value_len, smart_str *result)
 {
     int i = 0;
-    char *pattern = XMG(pattern);
-    int pattern_len = strlen(pattern);
+    char *xss = XMG(xss);
+    int xss_len = strlen(xss);
 
-    for (i = 0; i < pattern_len - 1; i++) {
-        if (pattern[i] == '$') {
-            if (pattern[i + 1] == 'n') {
+    for (i = 0; i < xss_len - 1; i++) {
+        if (xss[i] == '$') {
+            if (xss[i + 1] == 'n') {
                 smart_str_appendl(result, name, name_len);
                 i++;
-            } else if (pattern[i + 1] == 'v') {
+            } else if (xss[i + 1] == 'v') {
                 smart_str_appendl(result, value, value_len);
                 i++;
             } else {
-                smart_str_appendc(result, pattern[i]);
+                smart_str_appendc(result, xss[i]);
             }
         } else {
-            smart_str_appendc(result, pattern[i]);
+            smart_str_appendc(result, xss[i]);
         }
     }
-    smart_str_appendc(result, pattern[pattern_len - 1]);
+    smart_str_appendc(result, xss[xss_len - 1]);
 
     return 1;
 }
@@ -290,12 +290,12 @@ static int array_make_xss(HashTable *data)
     char *key;
     uint key_length;
     zval **value;
-    zval *marked;
+    zval *xss;
     smart_str tmp;
     pcre_cache_entry *pcre;
     zval *pcre_ret;
-    char *mark;
-    int mark_len;
+    char *marker;
+    int marker_len;
 
     if (!XMG(enabled))
         return SUCCESS;
@@ -308,10 +308,10 @@ static int array_make_xss(HashTable *data)
     // Recurtion protection
     data->nApplyCount++;
 
-    mark = XMG(mark);
-    mark_len = strlen(mark);
-    if ((pcre = pcre_get_compiled_regex_cache(mark, mark_len TSRMLS_CC)) == NULL) {
-         php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't compile regexp: \"%s\"", mark);
+    marker = XMG(marker);
+    marker_len = strlen(marker);
+    if ((pcre = pcre_get_compiled_regex_cache(marker, marker_len TSRMLS_CC)) == NULL) {
+         php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't compile regexp: \"%s\"", marker);
         return FAILURE;
     }
 
@@ -328,9 +328,9 @@ static int array_make_xss(HashTable *data)
             if (Z_LVAL_P(pcre_ret) > 0) {
                 smart_str_0(&tmp);
                 if (place_xss(key, key_length - 1, Z_STRVAL_P(*value), Z_STRLEN_P(*value), &tmp)) {
-                    MAKE_STD_ZVAL(marked);
-                    ZVAL_STRINGL(marked, tmp.c, tmp.len, 1);
-                    zend_hash_update(data, key, key_length, &marked, sizeof(zval *), NULL);
+                    MAKE_STD_ZVAL(xss);
+                    ZVAL_STRINGL(xss, tmp.c, tmp.len, 1);
+                    zend_hash_update(data, key, key_length, &xss, sizeof(zval *), NULL);
                 }
                 smart_str_free(&tmp);
             }

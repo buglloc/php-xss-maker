@@ -21,8 +21,8 @@ extern zend_module_entry xss_maker_module_entry;
 ZEND_BEGIN_MODULE_GLOBALS(xss_maker)
     long enabled;
     long autostart;
-    char *mark;
-    char *pattern;
+    char *marker;
+    char *xss;
 ZEND_END_MODULE_GLOBALS(xss_maker)
 
 #ifdef ZTS
