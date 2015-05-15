@@ -20,6 +20,7 @@ extern zend_module_entry xss_maker_module_entry;
 
 ZEND_BEGIN_MODULE_GLOBALS(xss_maker)
     long enabled;
+    long autostart;
     char *mark;
     char *pattern;
 ZEND_END_MODULE_GLOBALS(xss_maker)
@@ -30,7 +31,7 @@ ZEND_END_MODULE_GLOBALS(xss_maker)
 #define XMG(v) (xss_maker_globals.v)
 #endif
 
-#define XSS_MAKER_VERSION "0.1.0-dev"
+#define XSS_MAKER_VERSION "0.1.1-dev"
 #define XM_FIND_FUNCTION(name, func) zend_hash_find(EG(function_table), name, strlen(name)+1, (void **)(func))
 #define XM_REPLACE_FUNCTION(name, func) zend_hash_update(EG(function_table), name, strlen(name)+1, func, sizeof(zend_function), NULL)
 
@@ -42,6 +43,8 @@ PHP_MINIT_FUNCTION(xss_maker);
 PHP_RINIT_FUNCTION(xss_maker);
 PHP_MINFO_FUNCTION(xss_maker);
 PHP_GINIT_FUNCTION(xss_maker);
+PHP_FUNCTION(xss_maker_enable);
+PHP_FUNCTION(xss_maker_enabled);
 PHP_FUNCTION(xss_maker_inited);
 PHP_FUNCTION(xm_mysql_fetch_row);
 PHP_FUNCTION(xm_mysql_fetch_array);

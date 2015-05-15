@@ -40,6 +40,14 @@ static struct xm_overload_t_ xm_ovld[] = {
 ZEND_DECLARE_MODULE_GLOBALS(xss_maker)
 
 /* {{{ arginfo */
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_xss_maker_enable, 0, 0, 0)
+    ZEND_ARG_INFO(0, enable)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_xss_maker_enabled, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_xss_maker_inited, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -66,6 +74,8 @@ ZEND_END_ARG_INFO()
  * Every user visible function must have an entry in xss_maker_functions[].
  */
 const zend_function_entry xss_maker_functions[] = {
+    PHP_FE(xss_maker_enable,          arginfo_xss_maker_enable)
+    PHP_FE(xss_maker_enabled,         arginfo_xss_maker_enabled)
     PHP_FE(xss_maker_inited,          arginfo_xss_maker_inited)
     PHP_FE(xm_mysql_fetch_array,      arginfo_xm_mysql_fetch_array)
     PHP_FE(xm_mysql_fetch_assoc,      arginfo_xm_mysql_fetch_assoc)
@@ -101,7 +111,7 @@ ZEND_GET_MODULE(xss_maker)
 /* {{{ PHP_INI
  */
 PHP_INI_BEGIN()
-    STD_PHP_INI_BOOLEAN("xssmaker.enabled", "1", PHP_INI_SYSTEM, OnUpdateLong, enabled, zend_xss_maker_globals, xss_maker_globals)
+    STD_PHP_INI_BOOLEAN("xssmaker.autostart", "0", PHP_INI_SYSTEM, OnUpdateLong, autostart, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_ENTRY("xssmaker.mark", "#_xss$#i", PHP_INI_ALL, OnUpdateString, mark, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_ENTRY("xssmaker.pattern", "'\"><h1>$n|$v</h1>", PHP_INI_ALL, OnUpdateString, pattern, zend_xss_maker_globals, xss_maker_globals)
 PHP_INI_END()
@@ -110,7 +120,8 @@ PHP_INI_END()
 /* {{{ module global initialize handler */
 PHP_GINIT_FUNCTION(xss_maker)
 {
-    xss_maker_globals->enabled = 1;
+    xss_maker_globals->autostart = 0;
+    xss_maker_globals->enabled = 0;
     xss_maker_globals->mark = NULL;
     xss_maker_globals->pattern = NULL;
 }
@@ -132,8 +143,8 @@ PHP_RINIT_FUNCTION(xss_maker)
     zend_function *func, *orig;
     struct xm_overload_t_ *p;
 
-    if (!XMG(enabled))
-        return SUCCESS;
+    if (XMG(autostart))
+        XMG(enabled) = 1;
 
     if (XM_FIND_FUNCTION("xss_maker_inited", &orig) != SUCCESS || XM_FIND_FUNCTION("xss_maker_loaded", &func) == SUCCESS)
         return SUCCESS;
@@ -165,7 +176,7 @@ PHP_RINIT_FUNCTION(xss_maker)
 PHP_MINFO_FUNCTION(xss_maker)
 {
     php_info_print_table_start();
-    php_info_print_table_row(2, "XSS maker support", XMG(enabled) ? "enabled": "disabled");
+    php_info_print_table_row(2, "XSS Maker enabled", XMG(enabled) ? "enabled": "disabled");
     php_info_print_table_row(2, "Version", XSS_MAKER_VERSION);
     php_info_print_table_end();
 
@@ -173,6 +184,33 @@ PHP_MINFO_FUNCTION(xss_maker)
 }
 /* }}} */
 
+
+/* {{{ proto string xss_maker_inited()
+   Return a string to confirm that the module is compiled in */
+PHP_FUNCTION(xss_maker_enable)
+{
+    zend_bool enable = 1;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|b", &enable) == FAILURE) {
+        RETURN_NULL();
+    }
+
+    XMG(enabled) = enable;
+    if (enable)
+        RETURN_TRUE;
+    RETURN_FALSE;
+}
+/* }}} */
+
+/* {{{ proto string xss_maker_inited()
+   Return a string to confirm that the module is compiled in */
+PHP_FUNCTION(xss_maker_enabled)
+{
+    if (XMG(enabled))
+        RETURN_TRUE;
+    RETURN_FALSE;
+}
+/* }}} */
 
 /* {{{ proto string xss_maker_inited()
    Return a string to confirm that the module is compiled in */
@@ -259,6 +297,9 @@ static int array_make_xss(HashTable *data)
     char *mark;
     int mark_len;
 
+    if (!XMG(enabled))
+        return SUCCESS;
+
     if (data->nApplyCount > 0) {
         php_error_docref(NULL TSRMLS_CC, E_WARNING, "recursion detected");
         return FAILURE;
@@ -288,7 +329,7 @@ static int array_make_xss(HashTable *data)
                 smart_str_0(&tmp);
                 if (place_xss(key, key_length - 1, Z_STRVAL_P(*value), Z_STRLEN_P(*value), &tmp)) {
                     MAKE_STD_ZVAL(marked);
-                    ZVAL_STRINGL(marked, tmp.c, tmp.len, 1);    
+                    ZVAL_STRINGL(marked, tmp.c, tmp.len, 1);
                     zend_hash_update(data, key, key_length, &marked, sizeof(zval *), NULL);
                 }
                 smart_str_free(&tmp);
