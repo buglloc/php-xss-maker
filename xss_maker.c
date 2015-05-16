@@ -296,23 +296,22 @@ static int place_xss(char *name, int name_len, char *value, int value_len, smart
     int i = 0;
     char *xss = XMG(xss);
     int xss_len = strlen(xss);
+    int var_mode = 0;
+    char ch;
 
-    for (i = 0; i < xss_len - 1; i++) {
-        if (xss[i] == '$') {
-            if (xss[i + 1] == 'n') {
-                smart_str_appendl(result, name, name_len);
-                i++;
-            } else if (xss[i + 1] == 'v') {
-                smart_str_appendl(result, value, value_len);
-                i++;
-            } else {
-                smart_str_appendc(result, xss[i]);
-            }
+    while(xss_len--) {
+        ch = *xss++;
+
+        if (ch == '$' && !var_mode) {
+            var_mode = 1;
+        } else if (ch == 'n' && var_mode) {
+            smart_str_appendl(result, name, name_len);
+        } else if (ch == 'v' && var_mode) {
+            smart_str_appendl(result, value, value_len);
         } else {
-            smart_str_appendc(result, xss[i]);
+            smart_str_appendc(result, ch);
         }
     }
-    smart_str_appendc(result, xss[xss_len - 1]);
 
     return 1;
 }
@@ -360,7 +359,6 @@ static int array_make_xss(HashTable *data)
 
             php_pcre_match_impl(pcre, Z_STRVAL_P(*value), Z_STRLEN_P(*value), pcre_ret, NULL, 0, 0, 0, 0 TSRMLS_CC);
             if (Z_LVAL_P(pcre_ret) > 0) {
-                smart_str_0(&tmp);
                 if (place_xss(key, key_length - 1, Z_STRVAL_P(*value), Z_STRLEN_P(*value), &tmp)) {
                     MAKE_STD_ZVAL(xss);
                     ZVAL_STRINGL(xss, tmp.c, tmp.len, 1);
