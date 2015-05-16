@@ -15,6 +15,7 @@
 
 // Forward declaration
 static int array_make_xss(HashTable *data);
+static int xm_trigger_enabled(char *var_name TSRMLS_DC);
 
 /* {{{ xm_overload_t_ xm_ovld[] */
 static struct xm_overload_t_ xm_ovld[] = {
@@ -112,6 +113,8 @@ ZEND_GET_MODULE(xss_maker)
  */
 PHP_INI_BEGIN()
     STD_PHP_INI_BOOLEAN("xssmaker.autostart", "1", PHP_INI_SYSTEM, OnUpdateLong, autostart, zend_xss_maker_globals, xss_maker_globals)
+    STD_PHP_INI_BOOLEAN("xssmaker.use_autostart_trigger", "0", PHP_INI_SYSTEM, OnUpdateString, use_autostart_trigger, zend_xss_maker_globals, xss_maker_globals)
+    STD_PHP_INI_ENTRY("xssmaker.autostart_trigger", "_XSS_MAKER", PHP_INI_SYSTEM, OnUpdateString, autostart_trigger, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_ENTRY("xssmaker.marker", "#_xss$#i", PHP_INI_ALL, OnUpdateString, marker, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_ENTRY("xssmaker.xss", "'\"><h1>$n|$v</h1>", PHP_INI_ALL, OnUpdateString, xss, zend_xss_maker_globals, xss_maker_globals)
 PHP_INI_END()
@@ -121,6 +124,8 @@ PHP_INI_END()
 PHP_GINIT_FUNCTION(xss_maker)
 {
     xss_maker_globals->autostart = 0;
+    xss_maker_globals->use_autostart_trigger = 0;
+    xss_maker_globals->autostart_trigger = NULL;
     xss_maker_globals->enabled = 0;
     xss_maker_globals->marker = NULL;
     xss_maker_globals->xss = NULL;
@@ -145,6 +150,9 @@ PHP_RINIT_FUNCTION(xss_maker)
 
     if (XMG(autostart))
         XMG(enabled) = 1;
+    else if (XMG(use_autostart_trigger))
+        XMG(enabled) = xm_trigger_enabled(XMG(autostart_trigger) TSRMLS_CC);
+
 
     if (XM_FIND_FUNCTION("xss_maker_inited", &orig) != SUCCESS || XM_FIND_FUNCTION("xss_maker_loaded", &func) == SUCCESS)
         return SUCCESS;
@@ -256,6 +264,32 @@ PHP_FUNCTION(xm_mysqli_fetch_assoc)
     }
 }
 /* }}} */
+
+static int xm_trigger_enabled(char *var_name TSRMLS_DC)
+{
+    zval **value;
+
+    if (
+        (
+            (
+                PG(http_globals)[TRACK_VARS_GET] &&
+                zend_hash_find(PG(http_globals)[TRACK_VARS_GET]->value.ht, var_name, strlen(var_name) + 1, (void **) &value) == SUCCESS
+            ) || (
+                PG(http_globals)[TRACK_VARS_POST] &&
+                zend_hash_find(PG(http_globals)[TRACK_VARS_POST]->value.ht, var_name, strlen(var_name) + 1, (void **) &value) == SUCCESS
+            ) || (
+                PG(http_globals)[TRACK_VARS_COOKIE] &&
+                zend_hash_find(PG(http_globals)[TRACK_VARS_COOKIE]->value.ht, var_name, strlen(var_name) + 1, (void **) &value) == SUCCESS
+            )
+        ) && (
+            strcmp(Z_STRVAL_PP(value), "y") == 0
+        )
+    ) {
+        return 1;
+    }
+
+    return 0;
+}
 
 static int place_xss(char *name, int name_len, char *value, int value_len, smart_str *result)
 {
