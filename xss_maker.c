@@ -306,8 +306,10 @@ static int place_xss(char *name, int name_len, char *value, int value_len, smart
             var_mode = 1;
         } else if (ch == 'n' && var_mode) {
             smart_str_appendl(result, name, name_len);
+            var_mode = 0;
         } else if (ch == 'v' && var_mode) {
             smart_str_appendl(result, value, value_len);
+            var_mode = 0;
         } else {
             smart_str_appendc(result, ch);
         }
