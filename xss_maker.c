@@ -113,7 +113,7 @@ ZEND_GET_MODULE(xss_maker)
  */
 PHP_INI_BEGIN()
     STD_PHP_INI_BOOLEAN("xssmaker.autostart", "1", PHP_INI_SYSTEM, OnUpdateLong, autostart, zend_xss_maker_globals, xss_maker_globals)
-    STD_PHP_INI_BOOLEAN("xssmaker.use_autostart_trigger", "0", PHP_INI_SYSTEM, OnUpdateString, use_autostart_trigger, zend_xss_maker_globals, xss_maker_globals)
+    STD_PHP_INI_BOOLEAN("xssmaker.use_autostart_trigger", "0", PHP_INI_SYSTEM, OnUpdateLong, use_autostart_trigger, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_ENTRY("xssmaker.autostart_trigger", "_XSS_MAKER", PHP_INI_SYSTEM, OnUpdateString, autostart_trigger, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_ENTRY("xssmaker.marker", "#_xss$#i", PHP_INI_ALL, OnUpdateString, marker, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_ENTRY("xssmaker.xss", "'\"><h1>$n|$v</h1>", PHP_INI_ALL, OnUpdateString, xss, zend_xss_maker_globals, xss_maker_globals)
