@@ -304,6 +304,9 @@ static int place_xss(char *name, int name_len, char *value, int value_len, smart
 
         if (ch == '$' && !var_mode) {
             var_mode = 1;
+        } else if (ch == '$' && var_mode) {
+            // Previously variable mode marker
+            smart_str_appendc(result, '$');
         } else if (ch == 'n' && var_mode) {
             smart_str_appendl(result, name, name_len);
             var_mode = 0;
@@ -312,6 +315,7 @@ static int place_xss(char *name, int name_len, char *value, int value_len, smart
             var_mode = 0;
         } else {
             smart_str_appendc(result, ch);
+            var_mode || (var_mode = 0);
         }
     }
 
