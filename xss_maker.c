@@ -365,10 +365,11 @@ static int array_make_xss(HashTable *data)
 
             php_pcre_match_impl(pcre, Z_STRVAL_P(*value), Z_STRLEN_P(*value), pcre_ret, NULL, 0, 0, 0, 0 TSRMLS_CC);
             if (Z_LVAL_P(pcre_ret) > 0) {
+                smart_str_sets(&tmp, estrdup(""));
                 if (place_xss(key, key_length - 1, Z_STRVAL_P(*value), Z_STRLEN_P(*value), &tmp)) {
                     MAKE_STD_ZVAL(xss);
                     ZVAL_STRINGL(xss, tmp.c, tmp.len, 1);
-                    zend_hash_update(data, key, key_length, &xss, sizeof(zval *), NULL);
+                    zend_hash_update(data, key, key_length, &xss, sizeof(xss), NULL);
                 }
                 smart_str_free(&tmp);
             }
