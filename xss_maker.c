@@ -10,10 +10,12 @@
 
 #include "php.h"
 #include "php_xss_maker.h"
+#include "zend_multibyte.h"
 #include "ext/standard/php_smart_str.h"
 #include "ext/pcre/php_pcre.h"
 
 // Forward declaration
+static int initialize_local_marker(TSRMLS_D);
 static int array_make_xss(HashTable *data);
 static int xm_trigger_enabled(char *var_name TSRMLS_DC);
 
@@ -115,7 +117,7 @@ PHP_INI_BEGIN()
     STD_PHP_INI_BOOLEAN("xssmaker.autostart", "1", PHP_INI_SYSTEM, OnUpdateLong, autostart, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_BOOLEAN("xssmaker.use_autostart_trigger", "0", PHP_INI_SYSTEM, OnUpdateLong, use_autostart_trigger, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_ENTRY("xssmaker.autostart_trigger", "_XSS_MAKER", PHP_INI_SYSTEM, OnUpdateString, autostart_trigger, zend_xss_maker_globals, xss_maker_globals)
-    STD_PHP_INI_ENTRY("xssmaker.marker", "#_xss$#i", PHP_INI_ALL, OnUpdateString, marker, zend_xss_maker_globals, xss_maker_globals)
+    STD_PHP_INI_ENTRY("xssmaker.marker", "", PHP_INI_ALL, OnUpdateString, marker, zend_xss_maker_globals, xss_maker_globals)
     STD_PHP_INI_ENTRY("xssmaker.xss", "'\"><h1>$n|$v</h1>", PHP_INI_ALL, OnUpdateString, xss, zend_xss_maker_globals, xss_maker_globals)
 PHP_INI_END()
 /* }}} */
@@ -153,6 +155,8 @@ PHP_RINIT_FUNCTION(xss_maker)
     else if (XMG(use_autostart_trigger))
         XMG(enabled) = xm_trigger_enabled(XMG(autostart_trigger) TSRMLS_CC);
 
+    if (!strlen(XMG(marker)))
+        initialize_local_marker(TSRMLS_C);
 
     if (XM_FIND_FUNCTION("xss_maker_inited", &orig) != SUCCESS || XM_FIND_FUNCTION("xss_maker_loaded", &func) == SUCCESS)
         return SUCCESS;
@@ -264,6 +268,36 @@ PHP_FUNCTION(xm_mysqli_fetch_assoc)
     }
 }
 /* }}} */
+
+static char *get_default_charset(TSRMLS_D) {
+    if (PG(internal_encoding) && PG(internal_encoding)[0]) {
+        return PG(internal_encoding);
+    }
+    return NULL;
+}
+
+static int initialize_local_marker(TSRMLS_D)
+{
+    char *pattern;
+    char *encoding;
+    const zend_encoding *zenc = zend_multibyte_get_internal_encoding(TSRMLS_C);
+    if (!zenc)
+        return 0;
+
+    encoding = (char *)zend_multibyte_get_encoding_name(zenc);
+    if (!encoding)
+        return 0;
+
+    if (strcmp(encoding, XM_UTF8_ENCODING) == 0)
+        pattern = XM_UTF8_MARKER;
+    else
+        pattern = XM_NATIONAL_MARKER;
+
+    zend_alter_ini_entry(
+        "xssmaker.marker", sizeof("xssmaker.marker"),
+         pattern, strlen(pattern),
+        PHP_INI_USER, PHP_INI_STAGE_RUNTIME);
+}
 
 static int xm_trigger_enabled(char *var_name TSRMLS_DC)
 {

@@ -41,6 +41,10 @@ ZEND_END_MODULE_GLOBALS(xss_maker)
 #define XM_MYSQL_FETCH_ASSOC      1
 #define XM_MYSQLI_FETCH_ASSOC     2
 
+#define XM_UTF8_ENCODING          "UTF-8"
+#define XM_UTF8_MARKER            "#[\\xD0\\xD1][\\x80-\\xBF]#"
+#define XM_NATIONAL_MARKER        "#[\\xC0-\\xFF]#"
+
 PHP_MINIT_FUNCTION(xss_maker);
 PHP_RINIT_FUNCTION(xss_maker);
 PHP_MINFO_FUNCTION(xss_maker);
