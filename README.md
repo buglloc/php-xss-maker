@@ -14,6 +14,12 @@
 Умеет включатся по триггеру в запросе, по аналогии с XDebug, достаточно в печеньки добавить `_XSS_MAKER=y` и на всех ваших хитах XSS Maker будет делать своё дело.
 
 ## Установка
+Для пользователей ArchLinux есть [пакет в AUR](https://aur.archlinux.org/packages/php-xss-maker/):
+```
+yaourt -S php-xss-maker
+```
+
+Остальные могут собрать из исходников, самостоятельно:
 ```
 mkdir ~/tmp && cd ~/tmp
 git clone https://github.com/buglloc/php-xss-maker.git
