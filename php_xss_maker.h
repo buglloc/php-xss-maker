@@ -33,7 +33,7 @@ ZEND_END_MODULE_GLOBALS(xss_maker)
 #define XMG(v) (xss_maker_globals.v)
 #endif
 
-#define XSS_MAKER_VERSION "0.1.1-dev"
+#define XSS_MAKER_VERSION "0.1.2-dev"
 #define XM_FIND_FUNCTION(name, func) zend_hash_find(EG(function_table), name, strlen(name)+1, (void **)(func))
 #define XM_REPLACE_FUNCTION(name, func) zend_hash_update(EG(function_table), name, strlen(name)+1, func, sizeof(zend_function), NULL)
 
