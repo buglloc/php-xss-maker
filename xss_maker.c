@@ -12,6 +12,7 @@
 #include "php_xss_maker.h"
 #include "zend_multibyte.h"
 #include "ext/standard/php_smart_str.h"
+#include "ext/standard/info.h"
 #include "ext/pcre/php_pcre.h"
 
 // Forward declaration
