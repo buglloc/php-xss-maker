@@ -11,6 +11,7 @@
 #include "php.h"
 #include "php_xss_maker.h"
 #include "zend_multibyte.h"
+#include "SAPI.h"
 #include "ext/standard/php_smart_str.h"
 #include "ext/standard/info.h"
 #include "ext/pcre/php_pcre.h"
@@ -158,6 +159,13 @@ PHP_RINIT_FUNCTION(xss_maker)
 
     if (!strlen(XMG(marker)))
         initialize_local_marker(TSRMLS_C);
+
+    if (XMG(enabled)) {
+        sapi_header_line ctr = {0};
+        ctr.line = XSS_MAKER_HEADER;
+        ctr.line_len = sizeof(XSS_MAKER_HEADER) - 1;
+        sapi_header_op(SAPI_HEADER_REPLACE, &ctr TSRMLS_CC);
+    }
 
     if (XM_FIND_FUNCTION("xss_maker_inited", &orig) != SUCCESS || XM_FIND_FUNCTION("xss_maker_loaded", &func) == SUCCESS)
         return SUCCESS;
