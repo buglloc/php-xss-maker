@@ -278,13 +278,6 @@ PHP_FUNCTION(xm_mysqli_fetch_assoc)
 }
 /* }}} */
 
-static char *get_default_charset(TSRMLS_D) {
-    if (PG(internal_encoding) && PG(internal_encoding)[0]) {
-        return PG(internal_encoding);
-    }
-    return NULL;
-}
-
 static int initialize_local_marker(TSRMLS_D)
 {
     char *pattern;
